@@ -32,6 +32,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "program.hpp"
 #include "reciprocal.h"
 #include "virtual_memory.h"
+#ifdef __APPLE__
+#include <libkern/OSCacheControl.h>
+#endif
 
 namespace ARMV8A {
 
@@ -98,7 +101,9 @@ JitCompilerA64::JitCompilerA64()
 	memset(reg_changed_offset, 0, sizeof(reg_changed_offset));
 	memcpy(code, (void*) randomx_program_aarch64, CodeSize);
 
-#ifdef __GNUC__
+#if defined(__APPLE__)
+	sys_icache_invalidate(code, CodeSize - MainLoopBegin);
+#elif defined(__GNUC__)
 	__builtin___clear_cache(reinterpret_cast<char*>(code), reinterpret_cast<char*>(code + CodeSize));
 #endif
 }
@@ -169,7 +174,9 @@ void JitCompilerA64::generateProgram(Program& program, ProgramConfiguration& con
 	codePos = ((uint8_t*)randomx_program_aarch64_update_spMix1) - ((uint8_t*)randomx_program_aarch64);
 	emit32(ARMV8A::EOR | 10 | (IntRegMap[config.readReg0] << 5) | (IntRegMap[config.readReg1] << 16), code, codePos);
 
-#ifdef __GNUC__
+#if defined(__APPLE__)
+	sys_icache_invalidate(code + MainLoopBegin, codePos - MainLoopBegin);
+#elif defined(__GNUC__)
 	__builtin___clear_cache(reinterpret_cast<char*>(code + MainLoopBegin), reinterpret_cast<char*>(code + codePos));
 #endif
 }
@@ -226,7 +233,9 @@ void JitCompilerA64::generateProgramLight(Program& program, ProgramConfiguration
 	emit32(ARMV8A::ADD_IMM_LO | 2 | (2 << 5) | (imm_lo << 10), code, codePos);
 	emit32(ARMV8A::ADD_IMM_HI | 2 | (2 << 5) | (imm_hi << 10), code, codePos);
 
-#ifdef __GNUC__
+#if defined(__APPLE__)
+	sys_icache_invalidate(code + MainLoopBegin, codePos - MainLoopBegin);
+#elif defined(__GNUC__)
 	__builtin___clear_cache(reinterpret_cast<char*>(code + MainLoopBegin), reinterpret_cast<char*>(code + codePos));
 #endif
 }
@@ -344,7 +353,9 @@ void JitCompilerA64::generateSuperscalarHash(SuperscalarProgram(&programs)[N], s
 	memcpy(code + codePos, p1, p2 - p1);
 	codePos += p2 - p1;
 
-#ifdef __GNUC__
+#if defined(__APPLE__)
+	sys_icache_invalidate(code + CodeSize, codePos - CodeSize);
+#elif defined(__GNUC__)
 	__builtin___clear_cache(reinterpret_cast<char*>(code + CodeSize), reinterpret_cast<char*>(code + codePos));
 #endif
 }

@@ -7,3 +7,6 @@ x64/
 Release/
 Debug/
 build/
+
+cmake-build-debug/
+.idea/
